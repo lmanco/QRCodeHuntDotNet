@@ -14,10 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using System;
-using QRCodeHuntDotNet.API.Util;
 using System.Collections.Generic;
-using QRCodeHuntDotNet.API.DAL.Models;
-using QRCodeHuntDotNet.API.DAL.Repositories;
 
 namespace QRCodeHuntDotNet
 {
@@ -76,6 +73,8 @@ namespace QRCodeHuntDotNet
             services.AddSingleton<IFileWriter, FileWriter>();
             services.AddSingleton<IJSONReader<IEnumerable<Code>>, JSONReader<IEnumerable<Code>>>();
             services.AddSingleton<IJSONWriter<IEnumerable<Code>>, JSONWriter<IEnumerable<Code>>>();
+            services.AddSingleton<IGraphicsHelper, GraphicsHelper>();
+            services.AddSingleton<IQRCodeImageGenerator, QRCodeImageGenerator>();
 
             services.AddSwaggerGen(c =>
             {

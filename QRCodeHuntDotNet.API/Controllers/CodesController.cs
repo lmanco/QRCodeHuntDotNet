@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using QRCodeHuntDotNet.API.Controllers.Util;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace QRCodeHuntDotNet.API.Controllers
 {
@@ -47,7 +48,7 @@ namespace QRCodeHuntDotNet.API.Controllers
 
         // POST: api/v1/codes/gameName/numCodes
         [HttpPost("{gameName}/{numCodes}")]
-        public ActionResult<IResponseObject> PostCodes(string gameName, int numCodes)
+        public ActionResult<IResponseObject> PostCodes(string gameName, int numCodes, [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] CodesRequestDTO codesDTO = null)
         {
             if (_codeRepository.CodesDataFileExists(gameName))
             {
@@ -60,8 +61,15 @@ namespace QRCodeHuntDotNet.API.Controllers
                 Key = Guid.NewGuid(),
                 Num = num
             });
-            _codeRepository.CreateList(gameName, codes);
+            string siteUrl = string.IsNullOrEmpty(codesDTO?.SiteUrlOverride) ?
+                $"{HttpContext.Request.Scheme}{Uri.SchemeDelimiter}{HttpContext.Request.Host}" : codesDTO.SiteUrlOverride;
+            _codeRepository.CreateList(gameName, codes, siteUrl);
             return CreatedAtAction("GetCodes", new { gameName = gameName }, codes);
         }
+    }
+
+    public class CodesRequestDTO
+    {
+        public string SiteUrlOverride { get; set; }
     }
 }
