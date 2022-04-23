@@ -63,6 +63,7 @@ namespace QRCodeHuntDotNet
             services.AddScoped<IVerificationTokenRepository, VerificationTokenRepository>();
             services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
             services.AddScoped<ICodeRepository, CodeRepository>();
+            services.AddScoped<IUserGameRepository, UserGameRepository>();
             services.AddScoped<IResponseObjectFactory, ResponseObjectFactory>();
             services.AddScoped<IPasswordHasher, PasswordHasher>();
             services.AddScoped<IDALInit, DALInit>();
@@ -75,6 +76,7 @@ namespace QRCodeHuntDotNet
             services.AddSingleton<IJSONWriter<IEnumerable<Code>>, JSONWriter<IEnumerable<Code>>>();
             services.AddSingleton<IGraphicsHelper, GraphicsHelper>();
             services.AddSingleton<IQRCodeImageGenerator, QRCodeImageGenerator>();
+            services.AddSingleton<IHttpContextHelper, HttpContextHelper>();
 
             services.AddSwaggerGen(c =>
             {

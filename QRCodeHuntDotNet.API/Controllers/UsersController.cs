@@ -42,9 +42,11 @@ namespace QRCodeHuntDotNet.Controllers
         private readonly IPasswordHasher _passwordHasher;
         private readonly IVerificationTokenRepository _verificationTokenRepository;
         private readonly IPasswordResetTokenRepository _passwordResetTokenRepository;
+        private readonly IHttpContextHelper _httpContextHelper;
 
         public UsersController(IUserRepository userRepository, IMapper mapper, IResponseObjectFactory responseObjectFactory, IPasswordHasher passwordHasher,
-            IVerificationTokenRepository verificationTokenRepository, IPasswordResetTokenRepository passwordResetTokenRepository)
+            IVerificationTokenRepository verificationTokenRepository, IPasswordResetTokenRepository passwordResetTokenRepository,
+            IHttpContextHelper httpContextHelper)
         {
             _userRepository = userRepository;
             _mapper = mapper;
@@ -52,6 +54,7 @@ namespace QRCodeHuntDotNet.Controllers
             _passwordHasher = passwordHasher;
             _verificationTokenRepository = verificationTokenRepository;
             _passwordResetTokenRepository = passwordResetTokenRepository;
+            _httpContextHelper = httpContextHelper;
         }
 
         // GET: api/v1/users
@@ -80,7 +83,7 @@ namespace QRCodeHuntDotNet.Controllers
         [HttpGet("self")]
         public async Task<ActionResult<IResponseObject>> GetUser()
         {
-            int currentUserId = int.Parse(HttpContext.User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier).Value);
+            long currentUserId = _httpContextHelper.GetCurrentUserId(HttpContext);
             User user = await _userRepository.GetById(currentUserId);
             if (user == null)
                 return UserNotFound();
@@ -132,15 +135,13 @@ namespace QRCodeHuntDotNet.Controllers
             user.Verified = true;
             await _verificationTokenRepository.DeleteByEmail(user.Email);
             ActionResult<IResponseObject> response = await TryPerformUserUpdate(user);
-            var claims = new List<Claim>
+            await _httpContextHelper.SignInAsync(HttpContext, new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Name, user.Username),
                 new Claim(ClaimTypes.Role, user.Role.ToString())
-            };
-            var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
+            });
             return response;
         }
 
@@ -160,7 +161,7 @@ namespace QRCodeHuntDotNet.Controllers
             user.Verified = false;
             await _userRepository.Create(user);
             string siteUrl = string.IsNullOrEmpty(userDTO.SiteUrlOverride) ?
-                $"{HttpContext.Request.Scheme}{Uri.SchemeDelimiter}{HttpContext.Request.Host}" : userDTO.SiteUrlOverride;
+                _httpContextHelper.GetSiteUrl(HttpContext) : userDTO.SiteUrlOverride;
             await _verificationTokenRepository.CreateDefaultAndEmail(user.Email, user.Username, siteUrl);
             return CreatedAtAction("GetUser", new { id = user.Id }, _mapper.Map<UserResponseDTO>(user));
         }
@@ -180,8 +181,8 @@ namespace QRCodeHuntDotNet.Controllers
 
         private bool IsSelfOrAdmin(long id)
         {
-            long currentUserId = long.Parse(HttpContext.User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier).Value);
-            string currentUserRole = HttpContext.User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Role).Value;
+            long currentUserId = _httpContextHelper.GetCurrentUserId(HttpContext);
+            string currentUserRole = _httpContextHelper.GetCurrentUserRole(HttpContext);
             return currentUserId == id || currentUserRole == UserRole.Admin.ToString();
         }
 

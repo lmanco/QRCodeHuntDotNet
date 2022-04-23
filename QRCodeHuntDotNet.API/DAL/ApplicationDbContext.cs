@@ -13,5 +13,6 @@ namespace QRCodeHuntDotNet.API.DAL
         public DbSet<User> Users { get; set; }
         public DbSet<VerificationToken> VerificationTokens { get; set; }
         public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
+        public DbSet<UserGame> UserGames { get; set; }
     }
 }

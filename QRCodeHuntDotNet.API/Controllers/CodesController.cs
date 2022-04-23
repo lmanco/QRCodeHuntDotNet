@@ -10,6 +10,8 @@ using System.Net;
 using System.Threading.Tasks;
 using QRCodeHuntDotNet.API.Controllers.Util;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using QRCodeHuntDotNet.API.Controllers.Filters;
+using QRCodeHuntDotNet.API.Util;
 
 namespace QRCodeHuntDotNet.API.Controllers
 {
@@ -25,11 +27,14 @@ namespace QRCodeHuntDotNet.API.Controllers
 
         private ICodeRepository _codeRepository;
         private IResponseObjectFactory _responseObjectFactory;
+        private readonly IHttpContextHelper _httpContextHelper;
 
-        public CodesController(ICodeRepository codeRepository, IResponseObjectFactory responseObjectFactory)
+        public CodesController(ICodeRepository codeRepository, IResponseObjectFactory responseObjectFactory,
+            IHttpContextHelper httpContextHelper)
         {
             _codeRepository = codeRepository;
             _responseObjectFactory = responseObjectFactory;
+            _httpContextHelper = httpContextHelper;
         }
 
         // GET: api/v1/codes/gameName
@@ -48,6 +53,7 @@ namespace QRCodeHuntDotNet.API.Controllers
 
         // POST: api/v1/codes/gameName/numCodes
         [HttpPost("{gameName}/{numCodes}")]
+        [RestrictByRoles(new UserRole[] { UserRole.Admin })]
         public ActionResult<IResponseObject> PostCodes(string gameName, int numCodes, [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] CodesRequestDTO codesDTO = null)
         {
             if (_codeRepository.CodesDataFileExists(gameName))
@@ -62,7 +68,7 @@ namespace QRCodeHuntDotNet.API.Controllers
                 Num = num
             });
             string siteUrl = string.IsNullOrEmpty(codesDTO?.SiteUrlOverride) ?
-                $"{HttpContext.Request.Scheme}{Uri.SchemeDelimiter}{HttpContext.Request.Host}" : codesDTO.SiteUrlOverride;
+                _httpContextHelper.GetSiteUrl(HttpContext) : codesDTO.SiteUrlOverride;
             _codeRepository.CreateList(gameName, codes, siteUrl);
             return CreatedAtAction("GetCodes", new { gameName = gameName }, codes);
         }

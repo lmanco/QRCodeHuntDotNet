@@ -27,12 +27,15 @@ namespace QRCodeHuntDotNet.API.Controllers
         private readonly IUserRepository _userRepository;
         private readonly IResponseObjectFactory _responseObjectFactory;
         private readonly IPasswordHasher _passwordHasher;
+        private readonly IHttpContextHelper _httpContextHelper;
 
-        public LoginController(IUserRepository userRepository, IResponseObjectFactory responseObjectFactory, IPasswordHasher passwordHasher)
+        public LoginController(IUserRepository userRepository, IResponseObjectFactory responseObjectFactory, IPasswordHasher passwordHasher,
+            IHttpContextHelper httpContextHelper)
         {
             _userRepository = userRepository;
             _responseObjectFactory = responseObjectFactory;
             _passwordHasher = passwordHasher;
+            _httpContextHelper = httpContextHelper;
         }
 
         // POST: api/v1/login
@@ -46,15 +49,13 @@ namespace QRCodeHuntDotNet.API.Controllers
                 return LoginError(InvalidLoginErrorTitle, useEmail ? ErrorDetailEmail : ErrorDetailUsername);
             if (!user.Verified)
                 return LoginError(VerificationErrorTitle, ErrorDetailVerification);
-            var claims = new List<Claim>
+            await _httpContextHelper.SignInAsync(HttpContext, new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Name, user.Username),
                 new Claim(ClaimTypes.Role, user.Role.ToString())
-            };
-            var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
+            });
             return NoContent();
         }
 
